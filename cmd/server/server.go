@@ -1,9 +1,28 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 )
+
+type Subj struct {
+	Product string `json:"name"`
+	Price   int    `json:"price"`
+}
+
+func JSONHandler(w http.ResponseWriter, req *http.Request) {
+	subj := Subj{"Milk", 50}
+
+	resp, err := json.Marshal(subj)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("content-type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(resp)
+}
 
 func mainPage(res http.ResponseWriter, req *http.Request) {
 	body := fmt.Sprintf("Method: %s\r\n", req.Method)
@@ -27,12 +46,12 @@ func apiPage(res http.ResponseWriter, req *http.Request) {
 	res.Write([]byte("API PAGE!"))
 }
 
-type myHandler struct{}
-
 func (h myHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	data := []byte("Hello!")
 	res.Write(data)
 }
+
+type myHandler struct{}
 
 func StartAllEthServer() error {
 	var h myHandler
@@ -45,11 +64,12 @@ func StartAllEthServer() error {
 
 }
 
-func StartVlanServer() error {
+func StartVMServer() error {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc(`/api/`, apiPage)
 	mux.HandleFunc(`/`, mainPage)
+	mux.HandleFunc(`/json`, JSONHandler)
 
 	err := http.ListenAndServe("192.168.0.157:8080", mux)
 	if err != nil {

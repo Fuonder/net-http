@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	err := myServer.StartVlanServer()
+	err := myServer.StartVMServer()
 	if err != nil {
 		log.Fatal(err)
 	}
