@@ -1,77 +1,32 @@
 package server
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 )
 
-type Subj struct {
-	Product string `json:"name"`
-	Price   int    `json:"price"`
+type Middleware func(http.Handler) http.Handler
+
+func Conveyor(h http.Handler, middlewares ...Middleware) http.Handler {
+	for _, middleware := range middlewares {
+		h = middleware(h)
+	}
+	return h
 }
 
-func JSONHandler(w http.ResponseWriter, req *http.Request) {
-	subj := Subj{"Milk", 50}
-
-	resp, err := json.Marshal(subj)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("content-type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(resp)
+func middleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		next.ServeHTTP(w, r)
+	})
 }
 
-func mainPage(res http.ResponseWriter, req *http.Request) {
-	body := fmt.Sprintf("Method: %s\r\n", req.Method)
-	body += "Header ===============\r\n"
-	for k, v := range req.Header {
-		body += fmt.Sprintf("%s: %v\r\n", k, v)
-	}
-	body += "Query parameters ================\r\n"
-	err := req.ParseForm()
-	if err != nil {
-		res.Write([]byte(err.Error()))
-		return
-	}
-	for k, v := range req.Form {
-		body += fmt.Sprintf("%s: %v\r\n", k, v)
-	}
-	res.Write([]byte(body))
-}
-
-func apiPage(res http.ResponseWriter, req *http.Request) {
-	res.Write([]byte("API PAGE!"))
-}
-
-func (h myHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
-	data := []byte("Hello!")
-	res.Write(data)
-}
-
-type myHandler struct{}
-
-func StartAllEthServer() error {
-	var h myHandler
-
-	err := http.ListenAndServe(":8080", h)
-	if err != nil {
-		return fmt.Errorf("localhost Server start: %w", err)
-	}
-	return nil
-
+func rootHandle(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("Hello"))
 }
 
 func StartVMServer() error {
-	mux := http.NewServeMux()
-
-	mux.HandleFunc(`/api/`, apiPage)
-	mux.HandleFunc(`/`, mainPage)
-	mux.HandleFunc(`/json`, JSONHandler)
-
-	err := http.ListenAndServe("192.168.0.157:8080", mux)
+	http.Handle("/", Conveyor(http.HandlerFunc(rootHandle)))
+	err := http.ListenAndServe("192.168.0.157:8080", nil)
 	if err != nil {
 		return fmt.Errorf("VM server start: %w", err)
 	}
