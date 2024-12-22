@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	err := myServer.StartVMServer()
+	err := myServer.StartAuthPageServer()
 	if err != nil {
 		log.Fatal(err)
 	}
